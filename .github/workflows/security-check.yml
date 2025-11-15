@@ -1,0 +1,41 @@
+# Security check workflow
+# This helps ensure no secrets are accidentally committed
+
+name: Security Check
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  security-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Check for secrets.toml
+        run: |
+          if [ -f .streamlit/secrets.toml ]; then
+            echo "❌ ERROR: secrets.toml should not be committed!"
+            exit 1
+          else
+            echo "✅ secrets.toml not found (good!)"
+          fi
+      
+      - name: Check for hardcoded secrets
+        run: |
+          if grep -r "password\s*=\s*['\"].*['\"]" --include="*.py" | grep -v "#" | grep -v "example"; then
+            echo "⚠️  WARNING: Potential hardcoded passwords found"
+          fi
+          
+      - name: Verify .gitignore
+        run: |
+          if grep -q "secrets.toml" .gitignore; then
+            echo "✅ secrets.toml is in .gitignore"
+          else
+            echo "❌ ERROR: secrets.toml not in .gitignore!"
+            exit 1
+          fi
+
